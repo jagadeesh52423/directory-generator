@@ -1,0 +1,158 @@
+Directory Structure Generator - Design Document
+1. Overview and Purpose
+The Directory Structure Generator is a Next.js application designed to help developers quickly create project scaffolding by visualizing, modifying, and generating directory structures. Users can input a directory structure (like the example provided), make modifications through an intuitive UI, and execute the creation of these directories and files in their local filesystem.
+2. Features and Requirements
+Core Features
+
+Structure Visualization
+
+Parse and display directory structures in an expandable/collapsible tree view
+Visual differentiation between files and folders
+Support for comments/descriptions alongside structure items
+
+
+Structure Modification
+
+Checkboxes for inclusion/exclusion of items in final creation
+Toggle between file and directory types
+Rename files and directories
+Add new files or directories at any level
+Delete files or directories
+Support for drag-and-drop reordering
+
+
+File Type Detection
+
+Auto-detect file types based on extensions
+Interpret items with ** suffix as files (removing the suffix when creating)
+Manual override for file/folder designation
+
+
+Target Location Selection
+
+Directory browser to select parent directory for creation
+Option to save favorite locations
+Display available disk space at selected location
+
+
+Execution
+
+Create directories and files based on modified structure
+Progress indicator during creation
+Error handling for permission issues or disk space limitations
+Summary report of created items
+
+
+
+3. Architecture
+Component Structure
+Copy
+directory-generator/
+├── src/
+│   ├── app/                      # Next.js app directory
+│   │   ├── api/                  # API routes
+│   │   │   ├── execute/          # File/directory creation endpoint
+│   │   │   └── filesystem/       # Filesystem interaction endpoints
+│   │   ├── globals.css           # Global styles
+│   │   ├── layout.tsx            # Root layout
+│   │   └── page.tsx              # Home page
+│   ├── components/               # React components
+│   │   ├── DirectoryTree/        # Tree visualization components
+│   │   │   ├── DirectoryTree.tsx # Main tree component
+│   │   │   ├── TreeNode.tsx      # Individual node component
+│   │   │   └── TreeControls.tsx  # Tree control buttons
+│   │   ├── InputParser/          # Input parsing components
+│   │   │   ├── InputArea.tsx     # Text input for structure
+│   │   │   └── Parser.ts         # Parsing logic
+│   │   ├── ModificationPanel/    # Node modification components
+│   │   │   ├── NodeEditor.tsx    # Edit individual node properties
+│   │   │   └── BulkActions.tsx   # Actions applying to multiple nodes
+│   │   ├── DirectorySelector/    # Target directory selection
+│   │   │   ├── DirectoryBrowser.tsx  # File system browser
+│   │   │   └── SavedLocations.tsx    # Saved locations management
+│   │   └── Execution/            # Execution components
+│   │       ├── ExecuteButton.tsx # Trigger execution
+│   │       └── ProgressView.tsx  # Execution progress and results
+│   ├── hooks/                    # Custom React hooks
+│   │   ├── useDirectoryTree.ts   # Tree data management
+│   │   └── useFileSystem.ts      # File system interactions
+│   ├── services/                 # Business logic
+│   │   ├── parserService.ts      # Structure parsing service
+│   │   ├── fileSystemService.ts  # File system operations
+│   │   └── validationService.ts  # Structure validation
+│   ├── types/                    # TypeScript type definitions
+│   │   ├── node.ts               # Node type definitions
+│   │   └── fileSystem.ts         # File system type definitions
+│   └── utils/                    # Utility functions
+│       ├── treeUtils.ts          # Tree manipulation utilities
+│       └── fileUtils.ts          # File handling utilities
+Data Flow
+
+User inputs directory structure as text or uploads from a file
+Parser converts the text into a tree data structure
+UI renders the tree with interactive elements
+User modifies the tree through the UI
+When ready, user selects target directory and initiates execution
+Application creates directories and files through file system APIs
+Results are displayed to the user
+
+4. UI/UX Design
+Main Layout
+The application will use a three-panel layout:
+Copy+----------------------------------------+
+| Header / App Title / Controls          |
++----------------+-----+------------------+
+| Input Panel    |     | Modification     |
+| (Text Area)    |     | Panel            |
+|                |     | (Node Editor)    |
++----------------+ Tree+------------------+
+| Target Dir     | View| Execution        |
+| Selection      |     | Controls         |
++----------------+-----+------------------+
+|           Status Bar                    |
++----------------------------------------+
+Tree Visualization
+
+Expandable/collapsible nodes with intuitive icons
+Checkboxes for selection
+Color coding for files vs directories
+Visual indicators for modified nodes
+Drag handles for reordering
+
+Node Editor
+
+Name field with validation
+File/directory toggle
+Comment/description field
+Add child node button (for directories)
+Delete button with confirmation
+
+5. Technical Considerations
+File System Access
+
+Use the Node.js fs module on the server side through Next.js API routes
+Consider using the File System Access API for browsers that support it
+Implement proper error handling for permission issues
+
+Security
+
+Validate all user inputs
+Implement path traversal protection
+Limit access to specified directories only
+Consider rate limiting for API endpoints
+
+Performance
+
+Implement virtualization for large directory structures
+Optimize tree rendering with React memo and virtualized lists
+Consider using web workers for parsing large inputs
+
+6. Future Enhancements
+
+Template library: Save and load common directory structures
+Integration with popular project templates (React, Next.js, etc.)
+Export/import functionality for sharing structures
+Dark/light theme support
+File content templating for generated files
+Integration with version control systems
+Multiple structure comparison view
