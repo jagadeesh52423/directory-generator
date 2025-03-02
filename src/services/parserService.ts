@@ -11,13 +11,12 @@ const generateId = (): string => {
  */
 export function parseDirectoryStructure(input: string): TreeNode[] {
   const lines = input.split('\n').filter(line => line.trim() !== '');
-  const rootNodes: TreeNode[] = [];
-  let currentPath: TreeNode[] = []; // Track the current path in the tree
   
-  // First line is usually the root directory
+  // Handle root node separately
+  const rootNodes: TreeNode[] = [];
   if (lines.length > 0) {
-    const rootLine = lines[0];
-    const rootName = rootLine.trim().replace(/\/$/, ''); // Remove trailing slash if present
+    const rootLine = lines[0].trim();
+    const rootName = rootLine.replace(/\/$/, ''); // Remove trailing slash if present
     
     const rootNode: TreeNode = {
       id: generateId(),
@@ -30,38 +29,35 @@ export function parseDirectoryStructure(input: string): TreeNode[] {
     };
     
     rootNodes.push(rootNode);
-    currentPath.push(rootNode);
   }
   
-  // Process the rest of the lines (skipping the first line)
+  // Process non-root lines
+  const nodesByDepth: { [depth: number]: TreeNode[] } = {};
+  nodesByDepth[0] = rootNodes;
+  
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
+    const line = lines[i].trim();
+    if (!line) continue;
     
-    // Calculate indentation level based on characters
-    let indentLevel = 0;
+    // Count vertical bars to determine depth
+    const verticalBars = (line.match(/│/g) || []).length;
+    let depth = verticalBars;
     
-    // Count the indentation level by looking at the position of the last tree character
-    const treeCharMatch = line.match(/^(.*?)[├└│]──/);
-    if (treeCharMatch) {
-      indentLevel = Math.floor(treeCharMatch[1].length / 2) + 1;
-    } else {
-      // Simple indentation without tree characters
-      const simpleIndentMatch = line.match(/^(\s+)/);
-      indentLevel = simpleIndentMatch ? Math.floor(simpleIndentMatch[1].length / 2) : 0;
+    // If the line contains a treebox character (├ or └), add 1 to the depth
+    if (line.includes('├') || line.includes('└')) {
+      depth += 1;
     }
     
-    // Extract node name from the line (after tree characters) and remove trailing slash
-    const nodeNameMatch = line.match(/[├└│]──\s*([^#]+)/);
+    // Extract node name (remove tree characters and indentation)
+    const nameMatch = line.match(/[├└]──\s*([^#]*?)(?:\s+#.*)?$/);
     let nodeName = '';
     
-    if (nodeNameMatch) {
-      // Extract from tree format
-      nodeName = nodeNameMatch[1].trim();
+    if (nameMatch && nameMatch[1]) {
+      nodeName = nameMatch[1].trim();
     } else {
-      // Try to extract from simple indented format
-      const simpleNameMatch = line.match(/\s*([^#]+)/);
-      nodeName = simpleNameMatch ? simpleNameMatch[1].trim() : line.trim();
+      // If no tree characters, try to extract name directly
+      const simpleName = line.replace(/^[\s│]*/, '').split('#')[0].trim();
+      nodeName = simpleName;
     }
     
     // Extract comment if present
@@ -82,38 +78,36 @@ export function parseDirectoryStructure(input: string): TreeNode[] {
       type = 'file';
     }
     
-    // Adjust the current path based on indentation level
-    while (currentPath.length > indentLevel) {
-      currentPath.pop();
-    }
-    
     // Create the new node
     const newNode: TreeNode = {
       id: generateId(),
       name,
       type,
       selected: true,
-      depth: indentLevel,
+      depth,
       comment,
       isExpanded: true,
       children: type === 'directory' ? [] : undefined
     };
     
-    // Add to parent node
-    if (currentPath.length > 0) {
-      const parent = currentPath[currentPath.length - 1];
-      if (parent.children) {
-        parent.children.push(newNode);
+    // Find the parent node
+    const parentDepth = depth - 1;
+    if (parentDepth >= 0 && nodesByDepth[parentDepth] && nodesByDepth[parentDepth].length > 0) {
+      // Get the last node at the parent depth as the parent
+      const parentNode = nodesByDepth[parentDepth][nodesByDepth[parentDepth].length - 1];
+      if (parentNode.children) {
+        parentNode.children.push(newNode);
       }
-    } else {
-      // This is a root node
+    } else if (depth === 0) {
+      // This is another root node
       rootNodes.push(newNode);
     }
     
-    // If this is a directory, add it to the current path for potential children
-    if (type === 'directory') {
-      currentPath.push(newNode);
+    // Add this node to its depth level
+    if (!nodesByDepth[depth]) {
+      nodesByDepth[depth] = [];
     }
+    nodesByDepth[depth].push(newNode);
   }
   
   return rootNodes;
